@@ -23,5 +23,5 @@ This program allows a gym to:
 
 3. Update existing member information easily
 
-4. Check and display which memberships have expired
+4. Check and display which memberships have expired. 
 
