@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gym Management System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        form { margin-bottom: 20px; }
+        label { display: block; margin-top: 10px; }
+        input, select { padding: 5px; width: 200px; }
+        button { margin-top: 10px; padding: 5px 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .expired { background-color: #fdd; }
+    </style>
+</head>
+<body>
+    <h1>Gym Management System</h1>
+
+    <section id="register-section">
+        <h2>Register New Member</h2>
+        <form id="register-form">
+            <label for="memberId">Member ID:</label>
+            <input type="number" id="memberId" name="memberId" required />
+
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required />
+
+            <label for="age">Age:</label>
+            <input type="number" id="age" name="age" required />
+
+            <label for="membershipType">Membership Type:</label>
+            <select id="membershipType" name="membershipType" required>
+                <option value="">Select</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Quarterly">Quarterly</option>
+                <option value="Yearly">Yearly</option>
+            </select>
+
+            <button type="submit">Register</button>
+        </form>
+    </section>
+
+    <section id="members-section">
+        <h2>All Members</h2>
+        <button id="refresh-members">Refresh List</button>
+        <table id="members-table">
+            <thead>
+                <tr>
+                    <th>Member ID</th>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Membership Type</th>
+                    <th>Fee</th>
+                    <th>Join Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <section id="update-section" style="display:none;">
+        <h2>Update Member</h2>
+        <form id="update-form">
+            <input type="hidden" id="updateMemberId" name="memberId" />
+            <label for="updateName">Name:</label>
+            <input type="text" id="updateName" name="name" required />
+
+            <label for="updateAge">Age:</label>
+            <input type="number" id="updateAge" name="age" required />
+
+            <label for="updateMembershipType">Membership Type:</label>
+            <select id="updateMembershipType" name="membershipType" required>
+                <option value="">Select</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Quarterly">Quarterly</option>
+                <option value="Yearly">Yearly</option>
+            </select>
+
+            <button type="submit">Update</button>
+            <button type="button" id="cancel-update">Cancel</button>
+        </form>
+    </section>
+
+    <section id="expired-section">
+        <h2>Expired Memberships</h2>
+        <button id="refresh-expired">Refresh Expired List</button>
+        <table id="expired-table">
+            <thead>
+                <tr>
+                    <th>Member ID</th>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Membership Type</th>
+                    <th>Fee</th>
+                    <th>Join Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <script>
+        const apiBase = 'http://localhost:8080/api/members';
+
+        async function fetchMembers() {
+            const res = await fetch(apiBase);
+            const members = await res.json();
+            const tbody = document.querySelector('#members-table tbody');
+            tbody.innerHTML = '';
+            members.forEach(m => {
+                const tr = document.createElement('tr');
+                if (new Date(m.expiryDate) < new Date()) {
+                    tr.classList.add('expired');
+                }
+                tr.innerHTML = `
+                    <td>${m.memberId}</td>
+                    <td>${m.name}</td>
+                    <td>${m.age}</td>
+                    <td>${m.membershipType}</td>
+                    <td>Rs. ${m.fee}</td>
+                    <td>${m.joinDate}</td>
+                    <td>${m.expiryDate}</td>
+                    <td>${new Date(m.expiryDate) < new Date() ? 'Expired' : 'Active'}</td>
+                    <td>
+                        <button type="button" onclick="showUpdateForm(${m.memberId})">Update</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function fetchExpiredMembers() {
+            const res = await fetch(\`\${apiBase}/expired\`);
+            const members = await res.json();
+            const tbody = document.querySelector('#expired-table tbody');
+            tbody.innerHTML = '';
+            members.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.classList.add('expired');
+                tr.innerHTML = `
+                    <td>${m.memberId}</td>
+                    <td>${m.name}</td>
+                    <td>${m.age}</td>
+                    <td>${m.membershipType}</td>
+                    <td>Rs. ${m.fee}</td>
+                    <td>${m.joinDate}</td>
+                    <td>${m.expiryDate}</td>
+                    <td>Expired</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const memberId = parseInt(document.getElementById('memberId').value);
+            const name = document.getElementById('name').value;
+            const age = parseInt(document.getElementById('age').value);
+            const membershipType = document.getElementById('membershipType').value;
+
+            const res = await fetch(apiBase, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memberId, name, age, membershipType })
+            });
+
+            if (res.ok) {
+                alert('Member registered successfully!');
+                e.target.reset();
+                fetchMembers();
+            } else {
+                alert('Failed to register member.');
+            }
+        });
+
+        function showUpdateForm(memberId) {
+            fetch(\`\${apiBase}/\${memberId}\`)
+                .then(res => res.json())
+                .then(member => {
+                    document.getElementById('updateMemberId').value = member.memberId;
+                    document.getElementById('updateName').value = member.name;
+                    document.getElementById('updateAge').value = member.age;
+                    document.getElementById('updateMembershipType').value = member.membershipType;
+                    document.getElementById('update-section').style.display = 'block';
+                    window.scrollTo(0, document.body.scrollHeight);
+                });
+        }
+
+        document.getElementById('update-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const memberId = parseInt(document.getElementById('updateMemberId').value);
+            const name = document.getElementById('updateName').value;
+            const age = parseInt(document.getElementById('updateAge').value);
+            const membershipType = document.getElementById('updateMembershipType').value;
+
+            const res = await fetch(\`\${apiBase}/\${memberId}\`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memberId, name, age, membershipType })
+            });
+
+            if (res.ok) {
+                alert('Member updated successfully!');
+                document.getElementById('update-section').style.display = 'none';
+                fetchMembers();
+            } else {
+                alert('Failed to update member.');
+            }
+        });
+
+        document.getElementById('cancel-update').addEventListener('click', () => {
+            document.getElementById('update-section').style.display = 'none';
+        });
+
+        document.getElementById('refresh-members').addEventListener('click', fetchMembers);
+        document.getElementById('refresh-expired').addEventListener('click', fetchExpiredMembers);
+
+        // Initial load
+        fetchMembers();
+        fetchExpiredMembers();
+    </script>
+</body>
+</html>
